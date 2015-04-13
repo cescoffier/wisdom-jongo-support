@@ -9,23 +9,13 @@ import de.flapdoodle.embed.mongo.MongodExecutable;
 import de.flapdoodle.embed.mongo.MongodProcess;
 import de.flapdoodle.embed.mongo.MongodStarter;
 import de.flapdoodle.embed.mongo.config.IMongodConfig;
-import de.flapdoodle.embed.mongo.config.MongodConfigBuilder;
-import de.flapdoodle.embed.mongo.config.Net;
-import de.flapdoodle.embed.mongo.distribution.Version;
-import de.flapdoodle.embed.process.runtime.Network;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.osgi.framework.BundleContext;
-import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Fail.fail;
-import static org.mockito.Mockito.mock;
 
 public class JongoCRUDServiceTest {
     private MongodStarter starter;
@@ -35,7 +25,7 @@ public class JongoCRUDServiceTest {
 
     private static int port;
 
-    @BeforeClass
+   /* @BeforeClass
     public static void retrieveAFreePort() throws IOException {
         port = Network.getFreeServerPort();
     }
@@ -59,7 +49,7 @@ public class JongoCRUDServiceTest {
         if (mongodExecutable != null) {
             mongodExecutable.stop();
         }
-    }
+    }*/
 
     @Test
     public void testGetEntityClass() throws Exception {
@@ -73,7 +63,7 @@ public class JongoCRUDServiceTest {
 
     @Test
     public void testGetIdClass() throws Exception {
-       DB db = new MongoClient().getDB("TestDatabase");
+        DB db = new MongoClient().getDB("TestDatabase");
         JongoCRUDService<Panda> jc = new JongoCRUDService<Panda>(Panda.class, db);
         assertThat(jc.getIdClass()).isEqualTo(String.class);
 
@@ -95,7 +85,7 @@ public class JongoCRUDServiceTest {
 
     }
 
-   @Test
+    @Test
     public void testFindOneByIdNonExsisting() throws Exception {
         DB db = new MongoClient().getDB("TestDatabase");
         JongoCRUD<Panda> jc = new JongoCRUDService<Panda>(Panda.class, db);
@@ -118,19 +108,19 @@ public class JongoCRUDServiceTest {
         Long count =jc.count();
         Long sum = 0L;
         Iterable<Panda> iterable = jc.findAll();
-       sum= Long.valueOf(Iterables.size(iterable));
+        sum= Long.valueOf(Iterables.size(iterable));
         assertThat(count).isEqualTo(sum);
 
 
     }
 
     @Test
-    public void testFindAll1() throws Exception {
+    public void testFindAllByIterable() throws Exception {
 
     }
 
     @Test
-    public void testFindAll2() throws Exception {
+    public void testFindAllByEntityFilter() throws Exception {
 
     }
 
@@ -186,6 +176,10 @@ public class JongoCRUDServiceTest {
     public void testDeleteIterable() throws Exception {
         DB db = new MongoClient().getDB("TestDatabase");
         JongoCRUD<Panda> jc = new JongoCRUDService<Panda>(Panda.class, db);
+
+        for (int i= 0; i<5;i++){
+            jc.save(new Panda(i, "Paul"));
+        }
         Iterable<Panda> iterable =jc.findAll();
         jc.delete(iterable);
         assertThat(jc.count()).isEqualTo(0L);
@@ -193,8 +187,53 @@ public class JongoCRUDServiceTest {
     }
 
     @Test
-    public void testDelete2() throws Exception {
+    public void testDeleteIterableWithNonExsisting() throws Exception {
+        DB db = new MongoClient().getDB("TestDatabase");
+        JongoCRUD<Panda> jc = new JongoCRUDService<Panda>(Panda.class, db);
+        List<Panda> list = new ArrayList<Panda>();
+        Long count = jc.count();
+        list.add(jc.save(new Panda(1, "Paul")));
+        list.add(new Panda(5, "Paul"));
+        list.add(jc.save(new Panda(2, "Paul")));
+        Iterable<Panda> iterable =list;
+        try {
+            jc.delete(iterable);
+            fail("Illegal Argument Exception expected");
+        } catch (IllegalArgumentException e) {
+            // OK, the error is expected.
+        }
 
+        assertThat(count).isEqualTo(jc.count());
+        //todo fails see todo for this method
+    }
+
+    @Test
+    public void testDeleteEntity() throws Exception {
+        DB db = new MongoClient().getDB("TestDatabase");
+        JongoCRUD<Panda> jc = new JongoCRUDService<Panda>(Panda.class, db);
+        Panda p = jc.save(new Panda(23, "Paul"));
+        Long count = jc.count();
+        jc.delete(p);
+        Long count2 = jc.count();
+        assertThat(count).isEqualTo(count2+1);
+        assertThat(jc.findOne(p._id)).isNull();
+    }
+
+    @Test
+    public void testDeleteEntityNonExisting() throws Exception {
+        DB db = new MongoClient().getDB("TestDatabase");
+        JongoCRUD<Panda> jc = new JongoCRUDService<Panda>(Panda.class, db);
+        Panda p = new Panda(23, "Paul");
+        Long count = jc.count();
+        try {
+            jc.delete(p);
+            fail("Illegal Argument Exception expected");
+        } catch (IllegalArgumentException e) {
+            // OK, the error is expected.
+        }
+        Long count2 = jc.count();
+        assertThat(count).isEqualTo(count2);
+        assertThat(jc.findOne(p._id)).isNull();
     }
 
     @Test
@@ -214,6 +253,27 @@ public class JongoCRUDServiceTest {
         p.age = 24;
         Panda p2 = jc.save(p);
         assertThat(p._id).isEqualTo(p2._id);
+
+    }
+
+    @Test
+    public void testSaveIterable() throws Exception {
+        DB db = new MongoClient().getDB("TestDatabase");
+        JongoCRUD<Panda> jc = new JongoCRUDService<Panda>(Panda.class, db);
+        List<Panda> list = new ArrayList<Panda>();
+        Panda p = (new Panda(23, "Paul"));
+        Panda p2 = jc.save(new Panda(13, "Paula"));
+        Panda p3 = jc.save(new Panda(21, "Pam"));
+        p3.age = 45;
+        list.add(p);
+        list.add(p2);
+        list.add(p3);
+        Iterable<Panda> iterable = list;
+        Iterable<Panda> it2 =jc.save(iterable);
+        assertThat(iterable).containsExactlyElementsOf(it2);
+
+
+
 
     }
 
