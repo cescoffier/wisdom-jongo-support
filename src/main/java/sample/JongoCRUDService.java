@@ -32,7 +32,7 @@ public class JongoCRUDService<T> implements JongoCRUD<T> {
         this.entityClass = clazz;
         //Todo should call get data store?
         jongo = new Jongo(db);
-        collection = jongo.getCollection(entityClass.getName());
+        collection = jongo.getCollection(entityClass.getSimpleName());
         this.idField = findIdField();
     }
 

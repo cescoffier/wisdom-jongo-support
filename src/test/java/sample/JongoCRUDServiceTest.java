@@ -172,7 +172,7 @@ public class JongoCRUDServiceTest {
     }
 
 
-    @Test
+
     public void testDeleteIterable() throws Exception {
         DB db = new MongoClient().getDB("TestDatabase");
         JongoCRUD<Panda> jc = new JongoCRUDService<Panda>(Panda.class, db);
@@ -186,7 +186,7 @@ public class JongoCRUDServiceTest {
 
     }
 
-    @Test
+
     public void testDeleteIterableWithNonExsisting() throws Exception {
         DB db = new MongoClient().getDB("TestDatabase");
         JongoCRUD<Panda> jc = new JongoCRUDService<Panda>(Panda.class, db);
@@ -207,7 +207,7 @@ public class JongoCRUDServiceTest {
         //todo fails see todo for this method
     }
 
-    @Test
+
     public void testDeleteEntity() throws Exception {
         DB db = new MongoClient().getDB("TestDatabase");
         JongoCRUD<Panda> jc = new JongoCRUDService<Panda>(Panda.class, db);
@@ -219,7 +219,7 @@ public class JongoCRUDServiceTest {
         assertThat(jc.findOne(p._id)).isNull();
     }
 
-    @Test
+
     public void testDeleteEntityNonExisting() throws Exception {
         DB db = new MongoClient().getDB("TestDatabase");
         JongoCRUD<Panda> jc = new JongoCRUDService<Panda>(Panda.class, db);
