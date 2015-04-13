@@ -3,10 +3,12 @@ package sample;
 import org.jongo.Jongo;
 import org.wisdom.api.model.Crud;
 
-public interface JongoCRUD<T> extends Crud<T,String> {
+import java.io.Serializable;
+
+public interface JongoCRUD<T,K extends Serializable> extends Crud<T,K> {
     Jongo getJongoDataStore();
 
     void deleteAllFromCollection();
-    Object getIdFieldValue(T o);
+
 
 }

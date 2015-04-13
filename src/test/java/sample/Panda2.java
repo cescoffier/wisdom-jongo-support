@@ -4,23 +4,22 @@ package sample;
 import org.jongo.marshall.jackson.oid.Id;
 import org.jongo.marshall.jackson.oid.ObjectId;
 
-public class Panda {
+public class Panda2 {
 
-    @ObjectId // auto
+
     @Id
-    private String _id ;
+    private String _id ="8888888";
     public int age;
     String name;
 
-    public Panda(int age, String name) {
+    public Panda2(int age, String name) {
         this.age = age;
         this.name = name;
     }
 
-    public Panda() {
+    public Panda2() {
 
     }
-
     public String get_id() {
         return _id;
     }

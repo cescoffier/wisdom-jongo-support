@@ -10,23 +10,30 @@ import org.jongo.MongoCollection;
 import org.jongo.MongoCursor;
 import org.wisdom.api.model.*;
 
-import java.lang.annotation.Annotation;
+import java.io.Serializable;
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 
+import static org.jongo.Oid.withOid;
 
 
-public class JongoCRUDService<T> implements JongoCRUD<T> {
+public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T, K> {
 
     private final DB db;
     private final Class<T> entityClass;
+    private final Class<K> entityKeyClass;
     private final MongoCollection collection;
     private final Jongo jongo;
     private final Field idField;
+    private Class idFieldType;
 
+    /**
+     * Constructor
+     * @param clazz the class using the service.
+     * @param db the database the service is connecting to.
+     */
     public JongoCRUDService(Class<T> clazz, DB db) {
         this.db = db;
         this.entityClass = clazz;
@@ -34,29 +41,43 @@ public class JongoCRUDService<T> implements JongoCRUD<T> {
         jongo = new Jongo(db);
         collection = jongo.getCollection(entityClass.getSimpleName());
         this.idField = findIdField();
+        entityKeyClass = (Class<K>) this.idField.getType();
+
     }
 
-    public Field getIdField(){
-        return idField;
+    public Class getIdFieldType() {
+        return idFieldType;
     }
 
-    public Object getIdFieldValue(T o){
+    public void setIdFieldType(Class idFieldType) {
+        this.idFieldType = idFieldType;
+    }
+
+    /**
+     * Get the value inside of the id field of the entity.
+     *
+     * @param o the object whos id we want to retrieve.
+     * @return
+     */
+    private Object getIdFieldValue(T o) {
+        if (!idField.isAccessible()) {
+            idField.setAccessible(true);
+        }
+        return getEntityId(o);
+    }
+
+    private K getEntityId(T o) {
         try {
-            if(Modifier.isPrivate(idField.getModifiers())) {
-
+            if (!idField.isAccessible()) {
                 idField.setAccessible(true);
-                //Todo search for getter method instead of using accessable or maybe we need to reset to not accessible?
-                return idField.get(o);
             }
-
-            return idField.get(o);
+            return (K) idField.get(o);
         } catch (IllegalAccessException e) {
-
-
+            // TODO LOGGER HERE
             return null;
         }
-
     }
+
     /**
      * Jongo seems to be limited to ids that are named _id of type String annotated with @ObjectId or
      * any name of type string annotated with both @ObjectId and @Id. Otherwise there are problems when you later try
@@ -65,63 +86,55 @@ public class JongoCRUDService<T> implements JongoCRUD<T> {
      * @return returns the field that has the correct annotations.
      */
     private Field findIdField() {
+        if (idField != null) {
+            return idField;
+        }
+
         //check all declared fields first
         for (Field field : entityClass.getDeclaredFields()) {
-            if(checkAnnotations(field)!=null){
+            if (checkAnnotations(field) != null) {
                 return field;
             }
         }
         //If not found above check in the parent classes
         for (Field field : entityClass.getFields()) {
-            if(checkAnnotations(field)!=null){
+            if (checkAnnotations(field) != null) {
                 return field;
             }
         }
 
-        //not found at all we should throw an error or msg or something?
-        return null;
+        throw new IllegalStateException("Cannot find the id field inside " + entityClass.getName());
     }
 
     /**
      * Check each field to see if it has the annotations we are looking for.
+     *
      * @param field from an entity.
      * @return the field if it has the correct annotations otherwise returns null. Assumes that there isn't more than
      * one field with correct annotations.
      */
-    private Field checkAnnotations(Field field){
-        boolean isAnnotationObjectId = false;
-        boolean isAnnotationId = false;
+    private Field checkAnnotations(Field field) {
         Class type = field.getType();
         String name = field.getName();
 
+        org.jongo.marshall.jackson.oid.ObjectId objectId = field.getAnnotation(org.jongo.marshall.jackson.oid.ObjectId.class);
+        org.jongo.marshall.jackson.oid.Id id = field.getAnnotation(org.jongo.marshall.jackson.oid.Id.class);
 
+        if (name.equals("_id") && objectId != null
+                || id != null && objectId != null) {
+            setIdFieldType(ObjectId.class);
+            return field;
+        }
 
-        Annotation[] annotationsList = field.getDeclaredAnnotations();
-        //check annotation types
-        for (Annotation annotation : annotationsList) {
-            if (annotation.annotationType().equals(org.jongo.marshall.jackson.oid.ObjectId.class)) {
-                isAnnotationObjectId = true;
-            }
-            if (annotation.annotationType().equals(org.jongo.marshall.jackson.oid.Id.class)) {
-                isAnnotationId = true;
-            }
-        }
-        //todo can propably be consolidated?
-        if (name.contains("_id") && isAnnotationObjectId) {
-            return field;
-        }
-        if (isAnnotationId && isAnnotationObjectId) {
-            return field;
-        }
-        if (isAnnotationId){
-            return field;
-        }
-        if(type.equals(org.jongo.marshall.jackson.oid.ObjectId.class)){
+        if (id != null || type.equals(ObjectId.class)) {  // objectId is null
+            setIdFieldType(type);
             return field;
         }
 
         return null;
     }
+
+
 
     /**
      * Gets the entity class that is using the database.
@@ -130,25 +143,26 @@ public class JongoCRUDService<T> implements JongoCRUD<T> {
      */
     @Override
     public Class<T> getEntityClass() {
-        findIdField();
         return entityClass;
     }
 
+
+
     /**
      * Get the type of the Id of the entity.
-     * The id should be auto generated by Jongo using the annotation @objectId with a field name of _id.
      *
      * @return type String.
      */
     @Override
-    public Class<String> getIdClass() {
-        return String.class;
+    public Class<K> getIdClass() {
+        return entityKeyClass;
     }
 
     @Override
     public Jongo getJongoDataStore() {
         return new Jongo(db);
     }
+
 
     /**
      * Save a new copy of the entity in the database if it doesn't not already exist. If the entity already exists
@@ -169,13 +183,14 @@ public class JongoCRUDService<T> implements JongoCRUD<T> {
 
     /**
      * Save a new copy of the entity in the iterable list if it doesn't exist, or updates if it does exists.
+     *
      * @param iterable the collection of entities to be saved.
      * @return an iterable of the collections of entities that were saved.
      */
     @Override
     public Iterable<T> save(Iterable<T> iterable) {
         List<T> list = new ArrayList<T>();
-        for(T t : iterable){
+        for (T t : iterable) {
             list.add(save(t));
         }
         iterable = list;
@@ -186,23 +201,34 @@ public class JongoCRUDService<T> implements JongoCRUD<T> {
      * Find an object from the database by it's unique Id number.
      *
      * @param id the unique id of the object.
-     * @return the object if it exsists, otherwise return null.
+     * @return the object if it exists, otherwise return null.
      */
-    //TOdo currently only works if id is of type objectid
     @Override
-    public T findOne(String id) {
-        try {
-            return collection.findOne(new ObjectId(id)).as(entityClass);
-        } catch (IllegalArgumentException e) {
-            return null;
+    public T findOne(K id) {
+        if (idFieldType.equals(ObjectId.class)) {
+            String oid = id.toString();
+            if (ObjectId.isValid(oid)) {
+                return collection.findOne(withOid(id.toString())).as(entityClass);
+            } else {
+                return null;
+            }
         }
+
+        if (idFieldType.equals(String.class) || idFieldType.equals(Long.class) || idFieldType.equals(Long.TYPE)) {
+            return collection.findOne(createIdQuery(id)).as(entityClass);
+        }
+
+        throw new IllegalArgumentException("Id of type '" + id + "' is not supported");
     }
+
+
 
     //todo not tested
     @Override
-    public T findOne(EntityFilter<T> tentityFilter) {
+    public T findOne(EntityFilter<T> filter) {
+        //TODO Support jongo filter
         for (T entity : findAll()) {
-            if (tentityFilter.accept(entity)) {
+            if (filter.accept(entity)) {
                 return entity;
             }
         }
@@ -221,108 +247,103 @@ public class JongoCRUDService<T> implements JongoCRUD<T> {
     }
 
     @Override
-    public Iterable<T> findAll(Iterable iterable) {
-        //todo
-        return null;
+    public Iterable<T> findAll(Iterable<K> iterable) {
+        List<T> entities = new ArrayList<>();
+        for (K key : iterable) {
+            T entity = findOne(key);
+            if (entity == null) {
+                throw new IllegalArgumentException("Cannot find an entity of type " + entityClass + " with id " + key);
+            }
+            entities.add(entity);
+        }
+        return entities;
     }
 
     @Override
-    public Iterable findAll(EntityFilter entityFilter) {
-        //todo
-        return null;
+    public Iterable<T> findAll(EntityFilter<T> entityFilter) {
+        List<T> entities = new ArrayList<>();
+        for (T entity : findAll()) {
+            if (entityFilter.accept(entity)) {
+                entities.add(entity);
+            }
+        }
+        return entities;
     }
 
     /**
-     * TODO currently only works for type objectid
+     *
      * Delete an object by  from the collection if it exists.
      *
      * @param id of the object you wish to delete for.
      *           If the id doesn't exist there is an IllegalArgumentException.
-     *           <p/>
+     *           <p>
      *           Note: as far as I can tell jongo only supports remove for object id types and not others.
      */
     @Override
-    public void delete(String id) {
-        deleteByOID(id);
+    public void delete(K id) {
+        if (idFieldType.equals(ObjectId.class)) {
+            collection.remove(withOid(String.valueOf(id)));
+        } else {
+            WriteResult result = collection.remove(createIdQuery(id));
+           //get n is number of docs effected by operation in mongo
+            if (result.getN()==0){
+                throw new IllegalArgumentException("Unable to delete Id '" + id + "' not found");
+            }
+        }
     }
 
-    /**todo not finished
+    /**
+     *
      * Delete an object by  from the collection if it exists.
+     *
      * @param o is an object that is an entity. It needs to have a valid _id field.
      * @return returns the original object passed in.
-     *         If the id doesn't exist there is an IllegalArgumentException.
+     * If the id doesn't exist there is an IllegalArgumentException.
      */
     @Override
     public T delete(T o) {
-        deleteByQueryString(o);
-       /* if(getIdFieldValue(o).getClass().equals(java.lang.String.class)){
-            collection.remove(new ObjectId(String.valueOf(getIdFieldValue(o))));
+        K id = getEntityId(o);
+      /*  if (id == null) {
+            throw new IllegalArgumentException(" Cannot extract id from " + o);
         }*/
-
+        delete(id);
         return o;
     }
 
 
+
+
     /**
      * Delete a list of objects in the form of iterable from the collection if they exist.
+     *
      * @param iterable is an iterable of entities.
      * @return the original iterable.
      */
     @Override
     public Iterable<T> delete(Iterable<T> iterable) {
-        for(T temp : iterable){
-
-//TODO it stops running when it hits null but doesnt delete the rest of the items
-            try {
-                collection.remove(new ObjectId(String.valueOf(idField.get(temp))));
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            }
+        for (T temp : iterable) {
+            delete(temp);
         }
-
         return iterable;
-    }
-
-    private void deleteByOID(String id){
-
-        collection.remove(new ObjectId(id));
-    }
-
-    private void deleteByQueryString(T o){
-        //TODO remove by the differnt types
-        if(idField.getType().equals(java.lang.String.class));
-        {
-            //remove({_id: ObjectId("552b6ce7e4b0d2c08d915958")})
-        }
-        if(idField.getType().equals(java.lang.Long.class));
-
-        long num = 12L;
-        collection.remove("{_id: '"+num+"'}");
-
     }
 
     /**
      * Method provided by jongo to delete everything in the collection. Use with caution.
      */
-    public void deleteAllFromCollection(){
+    public void deleteAllFromCollection() {
         collection.remove();
     }
 
-    /**todo only works for objectid
+    /**
+     *
      * Checks to see if the object exsists in the Mongo Collection based on its ID.
      *
      * @param id of the object to search for.
      * @return true if found false if not found.
      */
     @Override
-    public boolean exists(String id) {
-        try {
-            collection.findOne(new ObjectId(id)).as(entityClass);
-            return true;
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
-
+    public boolean exists(K id) {
+        return findOne(id) != null;
     }
 
 
@@ -335,6 +356,23 @@ public class JongoCRUDService<T> implements JongoCRUD<T> {
     public long count() {
         MongoCursor<T> cursor = collection.find().as(entityClass);
         return cursor.count();
+    }
+
+    private String createIdQuery(K id) {
+        if (idFieldType.equals(ObjectId.class)) {
+            return withOid(id.toString());
+        }
+
+        if (idFieldType.equals(String.class)) {
+            return "{_id : '" + id + "'}";
+        }
+
+        if (idFieldType.equals(Long.class) || idFieldType.equals(Long.TYPE)) {
+            return "{_id : "+id+"}";
+        }
+
+        throw new IllegalArgumentException("Id of type '" + id + "' is not supported");
+
     }
 
     //todo
