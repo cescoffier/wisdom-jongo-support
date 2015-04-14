@@ -54,6 +54,9 @@ public class JongoBridge {
 
     private Class load(String classname) throws ClassNotFoundException {
         for (Bundle bundle : context.getBundles()) {
+            if (bundle.getBundleId() == 0) {
+                continue;
+            }
             try {
                 return bundle.loadClass(classname);
             } catch (ClassNotFoundException e) {

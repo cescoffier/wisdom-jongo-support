@@ -130,7 +130,7 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
         for (Annotation ann : field.getAnnotations()) {
             System.out.println("annotation " + ann.annotationType());
         }
-        if (field.isAnnotationPresent(org.jongo.marshall.jackson.oid.Id.class) || type.equals(ObjectId.class)) {  // objectId is null
+        if (hasAnnotation(field, org.jongo.marshall.jackson.oid.Id.class) || type.equals(ObjectId.class)) {  // objectId is null
             setIdFieldType(type);
             return field;
         }
@@ -140,6 +140,16 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
         }
 
         return null;
+    }
+
+    private boolean hasAnnotation(Field field, Class annotation) {
+        for (Annotation ann : field.getAnnotations()) {
+            if (ann.annotationType().getName().equals(annotation.getName())) {
+                System.out.println("annotation " + ann.annotationType().getClassLoader() + " vs " + annotation.getClassLoader());
+                return true;
+            }
+        }
+        return false;
     }
 
 
