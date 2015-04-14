@@ -1,6 +1,6 @@
 //TODO it seems to me you can only delete odjectids in jongo, even if jongo lets you manualy create ids of a differnt type
 
-package sample;
+package org.wisdom.jongo.sample;
 
 import com.mongodb.DB;
 import com.mongodb.WriteResult;
@@ -11,6 +11,7 @@ import org.jongo.MongoCursor;
 import org.wisdom.api.model.*;
 
 import java.io.Serializable;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -125,10 +126,17 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
             setIdFieldType(ObjectId.class);
             return field;
         }
-
-        if (id != null || type.equals(ObjectId.class)) {  // objectId is null
+        System.out.println("checking field " + field.getName() + " " + id + " / " + field.isAnnotationPresent(org.jongo.marshall.jackson.oid.Id.class));
+        for (Annotation ann : field.getAnnotations()) {
+            System.out.println("annotation " + ann.annotationType());
+        }
+        if (field.isAnnotationPresent(org.jongo.marshall.jackson.oid.Id.class) || type.equals(ObjectId.class)) {  // objectId is null
             setIdFieldType(type);
             return field;
+        }
+        if(id == null && objectId ==null && name.equals("_id")){
+            setIdFieldType(type);
+            return  field;
         }
 
         return null;
@@ -206,6 +214,7 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
     @Override
     public T findOne(K id) {
         if (idFieldType.equals(ObjectId.class)) {
+            System.out.println("idfieldtype: "+idFieldType+" objectid "+ObjectId.class);
             String oid = id.toString();
             if (ObjectId.isValid(oid)) {
                 return collection.findOne(withOid(id.toString())).as(entityClass);
@@ -281,14 +290,16 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
      */
     @Override
     public void delete(K id) {
+        WriteResult result;
         if (idFieldType.equals(ObjectId.class)) {
-            collection.remove(withOid(String.valueOf(id)));
+           result= collection.remove(withOid(String.valueOf(id)));
         } else {
-            WriteResult result = collection.remove(createIdQuery(id));
-           //get n is number of docs effected by operation in mongo
-            if (result.getN()==0){
-                throw new IllegalArgumentException("Unable to delete Id '" + id + "' not found");
-            }
+             result = collection.remove(createIdQuery(id));
+
+        }
+        //get n is number of docs effected by operation in mongo
+        if (result.getN()==0){
+            throw new IllegalArgumentException("Unable to delete Id '" + id + "' not found");
         }
     }
 

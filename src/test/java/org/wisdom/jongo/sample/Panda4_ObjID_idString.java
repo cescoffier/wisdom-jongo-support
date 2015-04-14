@@ -1,25 +1,24 @@
-package sample;
+package org.wisdom.jongo.sample;
 
 
-import org.jongo.marshall.jackson.oid.Id;
 import org.jongo.marshall.jackson.oid.ObjectId;
 
-public class Panda2 {
+public class Panda4_ObjID_idString {
 
-
-    @Id
-    private String _id ="8888888";
+    @ObjectId // auto
+    private String _id ;
     public int age;
     String name;
 
-    public Panda2(int age, String name) {
+    public Panda4_ObjID_idString(int age, String name) {
         this.age = age;
         this.name = name;
     }
 
-    public Panda2() {
+    public Panda4_ObjID_idString() {
 
     }
+
     public String get_id() {
         return _id;
     }
