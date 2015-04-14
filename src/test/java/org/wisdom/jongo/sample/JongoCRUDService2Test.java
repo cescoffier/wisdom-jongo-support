@@ -9,8 +9,11 @@ import de.flapdoodle.embed.mongo.MongodExecutable;
 import de.flapdoodle.embed.mongo.MongodProcess;
 import de.flapdoodle.embed.mongo.MongodStarter;
 import de.flapdoodle.embed.mongo.config.IMongodConfig;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,6 +28,30 @@ public class JongoCRUDService2Test {
 
     private static int port;
 
+
+    @Before
+    public void clearDb(){
+        DB db = null;
+        try {
+            db = new MongoClient().getDB("TestDatabase");
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+        JongoCRUDService<Panda6_objidId, org.bson.types.ObjectId> jc = new JongoCRUDService<>(Panda6_objidId.class, db);
+        jc.deleteAllFromCollection();
+    }
+
+    @After
+    public void clearDbA(){
+        DB db = null;
+        try {
+            db = new MongoClient().getDB("TestDatabase");
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+        JongoCRUDService<Panda6_objidId, org.bson.types.ObjectId> jc = new JongoCRUDService<>(Panda6_objidId.class, db);
+        jc.deleteAllFromCollection();
+    }
    /* @BeforeClass
     public static void retrieveAFreePort() throws IOException {
         port = Network.getFreeServerPort();
@@ -130,7 +157,9 @@ public class JongoCRUDService2Test {
     public void testExists() throws Exception {
         DB db = new MongoClient().getDB("TestDatabase");
         JongoCRUD<Panda2_ID_Long, Long> jc = new JongoCRUDService<>(Panda2_ID_Long.class, db);
-        Panda2_ID_Long p = jc.save(new Panda2_ID_Long(23, "Paul"));
+        Panda2_ID_Long p =new Panda2_ID_Long(23, "Paul");
+        p.set_id(189L);
+        jc.save(p);
         assertThat(jc.exists(p.get_id())).isEqualTo(true);
     }
 
@@ -138,7 +167,9 @@ public class JongoCRUDService2Test {
     public void testDoesNotExist() throws Exception {
         DB db = new MongoClient().getDB("TestDatabase");
         JongoCRUD<Panda2_ID_Long, Long> jc = new JongoCRUDService<>(Panda2_ID_Long.class, db);
-        Panda2_ID_Long p = jc.save(new Panda2_ID_Long(23, "Paul"));
+        Panda2_ID_Long p =new Panda2_ID_Long(23, "Paul");
+        p.set_id(189L);
+        jc.save(p);
         assertThat(jc.exists(1234L)).isEqualTo(false);
 
     }
@@ -162,7 +193,9 @@ public class JongoCRUDService2Test {
     public void testDeleteByIdNonExisting() throws Exception {
         DB db = new MongoClient().getDB("TestDatabase");
         JongoCRUD<Panda2_ID_Long, Long> jc = new JongoCRUDService<>(Panda2_ID_Long.class, db);
-        Panda2_ID_Long p = jc.save(new Panda2_ID_Long(23, "Paul"));
+        Panda2_ID_Long p =new Panda2_ID_Long(23, "Paul");
+        p.set_id(189L);
+        jc.save(p);
         Long count = jc.count();
         try {
             jc.delete(1234L);
@@ -182,7 +215,9 @@ public class JongoCRUDService2Test {
         JongoCRUD<Panda2_ID_Long, Long> jc = new JongoCRUDService<>(Panda2_ID_Long.class, db);
 
         for (int i= 0; i<5;i++){
-            jc.save(new Panda2_ID_Long(i, "Paul"));
+            Panda2_ID_Long p =new Panda2_ID_Long(23, "Paul");
+            p.set_id(189L+i);
+            jc.save(p);
         }
         Iterable<Panda2_ID_Long> iterable =jc.findAll();
         jc.delete(iterable);
@@ -196,9 +231,19 @@ public class JongoCRUDService2Test {
         JongoCRUD<Panda2_ID_Long, Long> jc = new JongoCRUDService<>(Panda2_ID_Long.class, db);
         List<Panda2_ID_Long> list = new ArrayList<Panda2_ID_Long>();
         Long count = jc.count();
-        list.add(jc.save(new Panda2_ID_Long(1, "Paul")));
-        list.add(new Panda2_ID_Long(5, "Paul"));
-        list.add(jc.save(new Panda2_ID_Long(2, "Paul")));
+        Panda2_ID_Long p =new Panda2_ID_Long(23, "Paul");
+        p.set_id(189L);
+
+        Panda2_ID_Long p2 =new Panda2_ID_Long(23, "Paul2");
+        p2.set_id(187L);
+
+        Panda2_ID_Long p3 =new Panda2_ID_Long(23, "Paul3");
+        p3.set_id(186L);
+
+        list.add(jc.save(p));
+        list.add(p2);
+        list.add(jc.save(p3));
+
         Iterable<Panda2_ID_Long> iterable =list;
         try {
             jc.delete(iterable);
@@ -215,7 +260,9 @@ public class JongoCRUDService2Test {
     public void testDeleteEntity() throws Exception {
         DB db = new MongoClient().getDB("TestDatabase");
         JongoCRUD<Panda2_ID_Long, Long> jc = new JongoCRUDService<>(Panda2_ID_Long.class, db);
-        Panda2_ID_Long p = jc.save(new Panda2_ID_Long(23, "Paul"));
+        Panda2_ID_Long p =new Panda2_ID_Long(23, "Paul");
+        p.set_id(189L);
+        jc.save(p);
         Long count = jc.count();
         jc.delete(p);
         Long count2 = jc.count();
@@ -227,7 +274,9 @@ public class JongoCRUDService2Test {
     public void testDeleteEntityNonExisting() throws Exception {
         DB db = new MongoClient().getDB("TestDatabase");
         JongoCRUD<Panda2_ID_Long, Long> jc = new JongoCRUDService<>(Panda2_ID_Long.class, db);
-        Panda2_ID_Long p = new Panda2_ID_Long(23, "Paul");
+        Panda2_ID_Long p =new Panda2_ID_Long(23, "Paul");
+        p.set_id(189L);
+        jc.save(p);
         Long count = jc.count();
         try {
             jc.delete(p);
@@ -244,7 +293,9 @@ public class JongoCRUDService2Test {
     public void testSaveNewEntity() throws Exception {
         DB db = new MongoClient().getDB("TestDatabase");
         JongoCRUD<Panda2_ID_Long, Long> jc = new JongoCRUDService<>(Panda2_ID_Long.class, db);
-        Panda2_ID_Long p = jc.save(new Panda2_ID_Long(25, "Jeff"));
+        Panda2_ID_Long p =new Panda2_ID_Long(23, "Paul");
+        p.set_id(189L);
+        jc.save(p);
         assertThat(p.get_id()).isNotNull();
 
     }
@@ -253,7 +304,9 @@ public class JongoCRUDService2Test {
     public void testSaveExistingEntity() throws Exception {
         DB db = new MongoClient().getDB("TestDatabase");
         JongoCRUD<Panda2_ID_Long, Long> jc = new JongoCRUDService<>(Panda2_ID_Long.class, db);
-        Panda2_ID_Long p = jc.save(new Panda2_ID_Long(23, "Paul"));
+        Panda2_ID_Long p =new Panda2_ID_Long(23, "Paul");
+        p.set_id(189L);
+        jc.save(p);
         p.age = 24;
         Panda2_ID_Long p2 = jc.save(p);
         assertThat(p.get_id()).isEqualTo(p2.get_id());
@@ -265,10 +318,17 @@ public class JongoCRUDService2Test {
         DB db = new MongoClient().getDB("TestDatabase");
         JongoCRUD<Panda2_ID_Long, Long> jc = new JongoCRUDService<>(Panda2_ID_Long.class, db);
         List<Panda2_ID_Long> list = new ArrayList<Panda2_ID_Long>();
-        Panda2_ID_Long p = (new Panda2_ID_Long(23, "Paul"));
-        Panda2_ID_Long p2 = jc.save(new Panda2_ID_Long(13, "Paula"));
-        Panda2_ID_Long p3 = jc.save(new Panda2_ID_Long(21, "Pam"));
+        Panda2_ID_Long p =new Panda2_ID_Long(23, "Paul");
+        p.set_id(187L);
+        jc.save(p);
+        Panda2_ID_Long p2 =new Panda2_ID_Long(23, "Paul2");
+        p2.set_id(189L);
+        jc.save(p2);
+        Panda2_ID_Long p3 =new Panda2_ID_Long(23, "Paul3");
+        p3.set_id(188L);
+        jc.save(p3);
         p3.age = 45;
+
         list.add(p);
         list.add(p2);
         list.add(p3);

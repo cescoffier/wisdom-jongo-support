@@ -9,6 +9,7 @@ import de.flapdoodle.embed.mongo.MongodExecutable;
 import de.flapdoodle.embed.mongo.MongodProcess;
 import de.flapdoodle.embed.mongo.MongodStarter;
 import de.flapdoodle.embed.mongo.config.IMongodConfig;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -27,7 +28,7 @@ public class JongoCRUDService1Test {
 
     private static int port;
 
-    @Before
+   @Before
     public void clearDb(){
         DB db = null;
         try {
@@ -38,6 +39,20 @@ public class JongoCRUDService1Test {
         JongoCRUDService<Panda6_objidId, org.bson.types.ObjectId> jc = new JongoCRUDService<>(Panda6_objidId.class, db);
         jc.deleteAllFromCollection();
     }
+
+    @After
+    public void clearDbA(){
+        DB db = null;
+        try {
+            db = new MongoClient().getDB("TestDatabase");
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+        JongoCRUDService<Panda6_objidId, org.bson.types.ObjectId> jc = new JongoCRUDService<>(Panda6_objidId.class, db);
+        jc.deleteAllFromCollection();
+    }
+
+
 
    /* @BeforeClass
     public static void retrieveAFreePort() throws IOException {
@@ -146,7 +161,7 @@ public class JongoCRUDService1Test {
         JongoCRUD<Panda1_idlong, Long> jc = new JongoCRUDService<>(Panda1_idlong.class, db);
         Panda1_idlong p = new Panda1_idlong(23, "Paul");
         p.set_id(400L);
-                jc.save(p);
+        jc.save(p);
         assertThat(jc.exists(p.get_id())).isEqualTo(true);
     }
 
@@ -309,10 +324,10 @@ public class JongoCRUDService1Test {
         p.set_id(400L);
         jc.save(p);
         Panda1_idlong p2 = new Panda1_idlong(23, "Paul2");
-        p.set_id(402L);
+        p2.set_id(402L);
         jc.save(p2);
         Panda1_idlong p3 = new Panda1_idlong(23, "Paul3");
-        p.set_id(403L);
+        p3.set_id(403L);
         jc.save(p3);
         p3.age = 45;
         list.add(p);
