@@ -1,14 +1,13 @@
-//TODO it seems to me you can only delete odjectids in jongo, even if jongo lets you manualy create ids of a differnt type
-
-package org.wisdom.jongo.sample;
+package org.wisdom.jongo.bridge;
 
 import com.mongodb.DB;
 import com.mongodb.WriteResult;
 import org.bson.types.ObjectId;
 import org.jongo.Jongo;
 import org.jongo.MongoCollection;
-import org.jongo.MongoCursor;
 import org.wisdom.api.model.*;
+import org.wisdom.jongo.service.JongoCRUD;
+import org.wisdom.jongo.service.MongoFilter;
 
 import java.io.Serializable;
 import java.lang.annotation.Annotation;
@@ -22,49 +21,34 @@ import static org.jongo.Oid.withOid;
 
 public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T, K> {
 
-    private final DB db;
     private final Class<T> entityClass;
     private final Class<K> entityKeyClass;
     private final MongoCollection collection;
-    private final Jongo jongo;
     private final Field idField;
     private Class idFieldType;
+    private JongoRepository repository;
 
     /**
      * Constructor
+     *
      * @param clazz the class using the service.
-     * @param db the database the service is connecting to.
+     * @param db    the database the service is connecting to.
      */
     public JongoCRUDService(Class<T> clazz, DB db) {
-        this.db = db;
         this.entityClass = clazz;
         //Todo should call get data store?
-        jongo = new Jongo(db);
+        Jongo jongo = new Jongo(db);
         collection = jongo.getCollection(entityClass.getSimpleName());
         this.idField = findIdField();
         entityKeyClass = (Class<K>) this.idField.getType();
-
     }
 
-    public Class getIdFieldType() {
-        return idFieldType;
+    public void setRepository(JongoRepository repository) {
+        this.repository = repository;
     }
 
     public void setIdFieldType(Class idFieldType) {
         this.idFieldType = idFieldType;
-    }
-
-    /**
-     * Get the value inside of the id field of the entity.
-     *
-     * @param o the object whos id we want to retrieve.
-     * @return
-     */
-    private Object getIdFieldValue(T o) {
-        if (!idField.isAccessible()) {
-            idField.setAccessible(true);
-        }
-        return getEntityId(o);
     }
 
     private K getEntityId(T o) {
@@ -93,18 +77,19 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
 
         //check all declared fields first
         for (Field field : entityClass.getDeclaredFields()) {
-            if (checkAnnotations(field) != null) {
+            if (isEntityId(field)) {
                 return field;
             }
         }
         //If not found above check in the parent classes
         for (Field field : entityClass.getFields()) {
-            if (checkAnnotations(field) != null) {
+            if (isEntityId(field)) {
                 return field;
             }
         }
 
-        throw new IllegalStateException("Cannot find the id field inside " + entityClass.getName());
+        throw new IllegalStateException(
+                "Cannot find the id field inside " + entityClass.getName());
     }
 
     /**
@@ -114,44 +99,41 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
      * @return the field if it has the correct annotations otherwise returns null. Assumes that there isn't more than
      * one field with correct annotations.
      */
-    private Field checkAnnotations(Field field) {
+    private boolean isEntityId(Field field) {
         Class type = field.getType();
         String name = field.getName();
 
-        org.jongo.marshall.jackson.oid.ObjectId objectId = field.getAnnotation(org.jongo.marshall.jackson.oid.ObjectId.class);
-        org.jongo.marshall.jackson.oid.Id id = field.getAnnotation(org.jongo.marshall.jackson.oid.Id.class);
+        org.jongo.marshall.jackson.oid.ObjectId objectId =
+                field.getAnnotation(org.jongo.marshall.jackson.oid.ObjectId.class);
+        org.jongo.marshall.jackson.oid.Id id =
+                field.getAnnotation(org.jongo.marshall.jackson.oid.Id.class);
 
         if (name.equals("_id") && objectId != null
                 || id != null && objectId != null) {
             setIdFieldType(ObjectId.class);
-            return field;
+            return true;
         }
-        System.out.println("checking field " + field.getName() + " " + id + " / " + field.isAnnotationPresent(org.jongo.marshall.jackson.oid.Id.class));
-        for (Annotation ann : field.getAnnotations()) {
-            System.out.println("annotation " + ann.annotationType());
-        }
-        if (hasAnnotation(field, org.jongo.marshall.jackson.oid.Id.class) || type.equals(ObjectId.class)) {  // objectId is null
+        if (hasAnnotation(field, org.jongo.marshall.jackson.oid.Id.class)
+                || type.equals(ObjectId.class)) {  // objectId is null
             setIdFieldType(type);
-            return field;
+            return true;
         }
-        if(id == null && objectId ==null && name.equals("_id")){
+        if (id == null && objectId == null && name.equals("_id")) {
             setIdFieldType(type);
-            return  field;
+            return true;
         }
 
-        return null;
+        return false;
     }
 
     private boolean hasAnnotation(Field field, Class annotation) {
         for (Annotation ann : field.getAnnotations()) {
             if (ann.annotationType().getName().equals(annotation.getName())) {
-                System.out.println("annotation " + ann.annotationType().getClassLoader() + " vs " + annotation.getClassLoader());
                 return true;
             }
         }
         return false;
     }
-
 
 
     /**
@@ -164,8 +146,6 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
         return entityClass;
     }
 
-
-
     /**
      * Get the type of the Id of the entity.
      *
@@ -175,12 +155,6 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
     public Class<K> getIdClass() {
         return entityKeyClass;
     }
-
-    @Override
-    public Jongo getJongoDataStore() {
-        return new Jongo(db);
-    }
-
 
     /**
      * Save a new copy of the entity in the database if it doesn't not already exist. If the entity already exists
@@ -207,7 +181,7 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
      */
     @Override
     public Iterable<T> save(Iterable<T> iterable) {
-        List<T> list = new ArrayList<T>();
+        List<T> list = new ArrayList<>();
         for (T t : iterable) {
             list.add(save(t));
         }
@@ -223,8 +197,13 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
      */
     @Override
     public T findOne(K id) {
+
+        if (id == null) {
+            return null;
+        }
+
         if (idFieldType.equals(ObjectId.class)) {
-            System.out.println("idfieldtype: "+idFieldType+" objectid "+ObjectId.class);
+            System.out.println("idfieldtype: " + idFieldType + " objectid " + ObjectId.class);
             String oid = id.toString();
             if (ObjectId.isValid(oid)) {
                 return collection.findOne(withOid(id.toString())).as(entityClass);
@@ -240,19 +219,20 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
         throw new IllegalArgumentException("Id of type '" + id + "' is not supported");
     }
 
-
-
-    //todo not tested
     @Override
     public T findOne(EntityFilter<T> filter) {
-        //TODO Support jongo filter
-        for (T entity : findAll()) {
-            if (filter.accept(entity)) {
-                return entity;
+        if (filter instanceof MongoFilter) {
+            final MongoFilter dbFilter = (MongoFilter) filter;
+            return collection.findOne(dbFilter.getFilter(),
+                    dbFilter.getParams()).as(entityClass);
+        } else {
+            for (T entity : findAll()) {
+                if (filter.accept(entity)) {
+                    return entity;
+                }
             }
         }
         return null;
-
     }
 
     /**
@@ -279,42 +259,46 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
     }
 
     @Override
-    public Iterable<T> findAll(EntityFilter<T> entityFilter) {
-        List<T> entities = new ArrayList<>();
-        for (T entity : findAll()) {
-            if (entityFilter.accept(entity)) {
-                entities.add(entity);
+    public Iterable<T> findAll(EntityFilter<T> filter) {
+        if (filter instanceof MongoFilter) {
+            final MongoFilter dbFilter = (MongoFilter) filter;
+            return collection.find(dbFilter.getFilter(),
+                    dbFilter.getParams()).as(entityClass);
+        } else {
+            List<T> entities = new ArrayList<>();
+            for (T entity : findAll()) {
+                if (filter.accept(entity)) {
+                    entities.add(entity);
+                }
             }
+            return entities;
         }
-        return entities;
     }
 
     /**
-     *
      * Delete an object by  from the collection if it exists.
      *
      * @param id of the object you wish to delete for.
      *           If the id doesn't exist there is an IllegalArgumentException.
-     *           <p>
+     *           <p/>
      *           Note: as far as I can tell jongo only supports remove for object id types and not others.
      */
     @Override
     public void delete(K id) {
         WriteResult result;
         if (idFieldType.equals(ObjectId.class)) {
-           result= collection.remove(withOid(String.valueOf(id)));
+            result = collection.remove(withOid(String.valueOf(id)));
         } else {
-             result = collection.remove(createIdQuery(id));
+            result = collection.remove(createIdQuery(id));
 
         }
         //get n is number of docs effected by operation in mongo
-        if (result.getN()==0){
+        if (result.getN() == 0) {
             throw new IllegalArgumentException("Unable to delete Id '" + id + "' not found");
         }
     }
 
     /**
-     *
      * Delete an object by  from the collection if it exists.
      *
      * @param o is an object that is an entity. It needs to have a valid _id field.
@@ -324,14 +308,9 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
     @Override
     public T delete(T o) {
         K id = getEntityId(o);
-      /*  if (id == null) {
-            throw new IllegalArgumentException(" Cannot extract id from " + o);
-        }*/
         delete(id);
         return o;
     }
-
-
 
 
     /**
@@ -356,7 +335,6 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
     }
 
     /**
-     *
      * Checks to see if the object exsists in the Mongo Collection based on its ID.
      *
      * @param id of the object to search for.
@@ -375,8 +353,7 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
      */
     @Override
     public long count() {
-        MongoCursor<T> cursor = collection.find().as(entityClass);
-        return cursor.count();
+        return collection.count();
     }
 
     private String createIdQuery(K id) {
@@ -389,20 +366,18 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
         }
 
         if (idFieldType.equals(Long.class) || idFieldType.equals(Long.TYPE)) {
-            return "{_id : "+id+"}";
+            return "{_id : " + id + "}";
         }
 
         throw new IllegalArgumentException("Id of type '" + id + "' is not supported");
 
     }
 
-    //todo
     @Override
     public Repository getRepository() {
-        return null;
+        return repository;
     }
 
-    /*--------------------------------------------------------------------------------------------*/
     @Override
     public void executeTransactionalBlock(Runnable runnable) throws HasBeenRollBackException {
         throw new UnsupportedOperationException("MongoDB does not support transactions");
@@ -415,20 +390,17 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
     }
 
     @Override
-    //used to be R
-    public FluentTransaction<T>.Intermediate transaction(Callable callable) {
+    public <R> FluentTransaction<R>.Intermediate transaction(Callable<R> callable) {
         throw new UnsupportedOperationException("MongoDB does not support transactions");
     }
 
     @Override
-    //used to be R
-    public FluentTransaction<T> transaction() {
+    public <R> FluentTransaction<R> transaction() {
         throw new UnsupportedOperationException("MongoDB does not support transactions");
     }
 
     @Override
-    //used to be A
-    public T executeTransactionalBlock(Callable callable) throws HasBeenRollBackException {
+    public <A> A executeTransactionalBlock(Callable<A> callable) throws HasBeenRollBackException {
         throw new UnsupportedOperationException("MongoDB does not support transactions");
     }
 }
