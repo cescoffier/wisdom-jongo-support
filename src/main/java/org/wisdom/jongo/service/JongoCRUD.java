@@ -6,7 +6,7 @@ import java.io.Serializable;
 
 public interface JongoCRUD<T,K extends Serializable> extends Crud<T,K> {
 
-    void deleteAllFromCollection();
+    public void deleteAllFromCollection();
 
 
 }
