@@ -16,6 +16,9 @@ import org.wisdom.api.model.Repository;
 import java.net.URL;
 import java.util.*;
 
+/**
+ *
+ */
 @Component
 @Provides
 public class JongoRepository implements Repository<DB>,
@@ -34,6 +37,9 @@ public class JongoRepository implements Repository<DB>,
 
     private BundleTracker<List<InstantiatedCrud>> tracker;
 
+    /**
+     *
+     */
     @Validate
     public void start() {
         LOGGER.info("Starting Jongo Repository for {}", database.getName());
@@ -43,6 +49,9 @@ public class JongoRepository implements Repository<DB>,
         tracker.open();
     }
 
+    /**
+     *
+     */
     @Invalidate
     public void stop() {
         LOGGER.info("Stopping Jongo Repository for {}", database.getName());
@@ -58,7 +67,7 @@ public class JongoRepository implements Repository<DB>,
     }
 
     /**
-     * Gets all Crud Service managed by the current repository. This allow retrieving the set of entity class managed
+     * Gets all Crud Service managed by the current repository. This allows for retrieving the set of entity classes managed
      * by the current repository.
      *
      * @return the set of Curd service, empty if none.
@@ -111,6 +120,12 @@ public class JongoRepository implements Repository<DB>,
         return database;
     }
 
+    /**
+     *
+     * @param bundle
+     * @param event
+     * @return
+     */
     @Override
     public List<InstantiatedCrud> addingBundle(Bundle bundle, BundleEvent event) {
         // 1 for each listed entity check if the bundle contains it
@@ -142,6 +157,12 @@ public class JongoRepository implements Repository<DB>,
         return null;
     }
 
+    /**
+     *
+     * @param bundle
+     * @param entity
+     * @return
+     */
     private Class load(Bundle bundle, String entity) {
         try {
             return bundle.loadClass(entity);
@@ -157,6 +178,12 @@ public class JongoRepository implements Repository<DB>,
         // Not supported
     }
 
+    /**
+     *
+     * @param bundle
+     * @param event
+     * @param object
+     */
     @Override
     public void removedBundle(Bundle bundle, BundleEvent event, List<InstantiatedCrud> object) {
         for (InstantiatedCrud c : object) {
@@ -164,7 +191,9 @@ public class JongoRepository implements Repository<DB>,
         }
     }
 
-
+    /**
+     *
+     */
     class InstantiatedCrud {
         private String entity;
         private Bundle bundle;

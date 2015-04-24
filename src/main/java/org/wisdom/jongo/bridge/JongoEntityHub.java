@@ -9,6 +9,9 @@ import org.wisdom.api.configuration.Configuration;
 
 import java.util.*;
 
+/**
+ * Ipojo component
+ */
 @Component(immediate = true)
 @Instantiate
 public class JongoEntityHub {
@@ -22,10 +25,21 @@ public class JongoEntityHub {
 
     private Map<String, ComponentInstance> instances = new HashMap<>();
 
+    /**
+     * Constructor.
+     * @param configuration configuration file found in configuration/application.conf
+     */
     public JongoEntityHub(@Requires ApplicationConfiguration configuration) {
         this.configuration = configuration;
     }
 
+    /**
+     * Method that is called when the ipojo component starts. Reads the config file looking for jongo information.
+     * Creates repository instances.
+     * @throws MissingHandlerException
+     * @throws UnacceptableConfiguration
+     * @throws ConfigurationException
+     */
     @Validate
     public void start() throws MissingHandlerException, UnacceptableConfiguration, ConfigurationException {
         // Parse the entities configuration
@@ -42,6 +56,14 @@ public class JongoEntityHub {
         }
     }
 
+    /**
+     * Create the repository instance.
+     * @param name the key in the config file used to identify the data source.
+     * @param entities a list of entities that will use this repository.
+     * @throws UnacceptableConfiguration
+     * @throws MissingHandlerException
+     * @throws ConfigurationException
+     */
     private void createRepositoryInstance(String name, List<String> entities) throws UnacceptableConfiguration, MissingHandlerException,
             ConfigurationException {
         Dictionary<String, Object> conf = new Hashtable<>();
@@ -52,6 +74,9 @@ public class JongoEntityHub {
         instances.put(name, factory.createComponentInstance(conf));
     }
 
+    /**
+     * Called when the component is stopped, it clears all instances being used.
+     */
     @Invalidate
     public void stop() {
         for (Map.Entry<String, ComponentInstance> entry : instances.entrySet()) {

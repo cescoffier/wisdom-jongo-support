@@ -3,6 +3,7 @@ package org.wisdom.jongo.bridge;
 import com.mongodb.DB;
 import com.mongodb.WriteResult;
 import org.bson.types.ObjectId;
+
 import org.jongo.Jongo;
 import org.jongo.MongoCollection;
 import org.wisdom.api.model.*;
@@ -18,7 +19,22 @@ import java.util.concurrent.Callable;
 
 import static org.jongo.Oid.withOid;
 
-
+/**
+ * Jongo Crud service for the Wisdom-Framework. Extends the provided crud service.
+ * @param <T> the entity class that you wish to use the crud services with.
+ * @param <K> The type of the id field found in the entity class. Ie String, Long, ObjectId.
+ * NOTE: Jongo seems to be limited to  6 types ids that it recognizes. Three are auto created ids by the database
+ *      Case 1: field named _id of type String or long annotated with @ObjectId.
+ *      Case 2: string or long with any name, annotated with both @ObjectId and @Id.
+ *      Case 3: Type org.bson.types.ObjectId named _id.
+ * There are 3 type where you must manually set the key before saving to the database.
+ *      Case 1: type long name id. No annotations.
+ *      Case 2: type long annotated with @Id named whatever you want.
+ *      Case 3: type string annotated with @Id named whatever you want.
+ * All other case are currently not supported.
+ *
+ *
+ */
 public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T, K> {
 
     private final Class<T> entityClass;
@@ -36,21 +52,34 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
      */
     public JongoCRUDService(Class<T> clazz, DB db) {
         this.entityClass = clazz;
-        //Todo should call get data store?
         Jongo jongo = new Jongo(db);
         collection = jongo.getCollection(entityClass.getSimpleName());
         this.idField = findIdField();
         entityKeyClass = (Class<K>) this.idField.getType();
+        System.out.println(entityClass +" : "+idField);
     }
 
+    /**
+     * Sets the repository to use.
+     * @param repository
+     */
     public void setRepository(JongoRepository repository) {
         this.repository = repository;
     }
 
+    /**
+     * Sets the idField type.
+     * @param idFieldType
+     */
     public void setIdFieldType(Class idFieldType) {
         this.idFieldType = idFieldType;
     }
 
+    /**
+     *
+     * @param o
+     * @return
+     */
     private K getEntityId(T o) {
         try {
             if (!idField.isAccessible()) {
@@ -64,9 +93,7 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
     }
 
     /**
-     * Jongo seems to be limited to ids that are named _id of type String annotated with @ObjectId or
-     * any name of type string annotated with both @ObjectId and @Id. Otherwise there are problems when you later try
-     * to remove the object.
+     * Check the fields in the entity class and parent class to find the correct id field.
      *
      * @return returns the field that has the correct annotations.
      */
@@ -96,7 +123,7 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
      * Check each field to see if it has the annotations we are looking for.
      *
      * @param field from an entity.
-     * @return the field if it has the correct annotations otherwise returns null. Assumes that there isn't more than
+     * @return true if it has the correct annotations otherwise returns false. Assumes that there isn't more than
      * one field with correct annotations.
      */
     private boolean isEntityId(Field field) {
@@ -126,6 +153,12 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
         return false;
     }
 
+    /**
+     * Check if the filed is annotated.
+     * @param field field from current class or parent class.
+     * @param annotation the annotation we are searching for.
+     * @return true if found false if not.
+     */
     private boolean hasAnnotation(Field field, Class annotation) {
         for (Annotation ann : field.getAnnotations()) {
             if (ann.annotationType().getName().equals(annotation.getName())) {
@@ -203,7 +236,6 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
         }
 
         if (idFieldType.equals(ObjectId.class)) {
-            System.out.println("idfieldtype: " + idFieldType + " objectid " + ObjectId.class);
             String oid = id.toString();
             if (ObjectId.isValid(oid)) {
                 return collection.findOne(withOid(id.toString())).as(entityClass);
@@ -219,6 +251,11 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
         throw new IllegalArgumentException("Id of type '" + id + "' is not supported");
     }
 
+    /**
+     * Find one entity using the Mongo filter which gives us access to mongo query string formats.
+     * @param filter what we are searching for.
+     * @return the einity if found otherwise returns null.
+     */
     @Override
     public T findOne(EntityFilter<T> filter) {
         if (filter instanceof MongoFilter) {
@@ -258,6 +295,13 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
         return entities;
     }
 
+    /**
+     * Find all of the objects in a Mongo Collection using a filter.
+     *
+     *
+     * @param filter what we want to search for.
+     * @return an iterable of the entity type.
+     */
     @Override
     public Iterable<T> findAll(EntityFilter<T> filter) {
         if (filter instanceof MongoFilter) {
@@ -335,7 +379,7 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
     }
 
     /**
-     * Checks to see if the object exsists in the Mongo Collection based on its ID.
+     * Checks to see if the object exists in the Mongo Collection based on its ID.
      *
      * @param id of the object to search for.
      * @return true if found false if not found.
@@ -357,11 +401,7 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
     }
 
     private String createIdQuery(K id) {
-        if (idFieldType.equals(ObjectId.class)) {
-            return withOid(id.toString());
-        }
-
-        if (idFieldType.equals(String.class)) {
+       if (idFieldType.equals(String.class)) {
             return "{_id : '" + id + "'}";
         }
 
@@ -372,6 +412,7 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
         throw new IllegalArgumentException("Id of type '" + id + "' is not supported");
 
     }
+
 
     @Override
     public Repository getRepository() {

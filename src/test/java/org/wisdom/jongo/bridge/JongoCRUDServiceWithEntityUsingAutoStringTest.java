@@ -21,7 +21,7 @@ public class JongoCRUDServiceWithEntityUsingAutoStringTest extends JongoBaseTest
 
     @Before
     public void clearDb() {
-        JongoCRUDService<PandaUsingAutoString4, ObjectId> jc = new JongoCRUDService<>(PandaUsingAutoString4.class, db());
+        JongoCRUDService<PandaUsingAutoString4, String> jc = new JongoCRUDService<>(PandaUsingAutoString4.class, db());
         jc.deleteAllFromCollection();
     }
 

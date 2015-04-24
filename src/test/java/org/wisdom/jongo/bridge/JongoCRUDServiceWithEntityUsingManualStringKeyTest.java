@@ -16,7 +16,7 @@ import static org.assertj.core.api.Fail.fail;
 public class JongoCRUDServiceWithEntityUsingManualStringKeyTest extends JongoBaseTest {
     @Before
     public void clearDb() {
-        JongoCRUDService<PandaUsingManualStringId3, ObjectId> jc = new JongoCRUDService<>(PandaUsingManualStringId3.class, db());
+        JongoCRUDService<PandaUsingManualStringId3, String> jc = new JongoCRUDService<>(PandaUsingManualStringId3.class, db());
         jc.deleteAllFromCollection();
     }
 
