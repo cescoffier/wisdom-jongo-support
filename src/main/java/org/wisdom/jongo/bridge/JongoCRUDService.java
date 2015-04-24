@@ -44,6 +44,8 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
     private Class idFieldType;
     private JongoRepository repository;
 
+    //constant name of the field in the entity to be used for id
+    private final String ID = "_id" ;
     /**
      * Constructor
      *
@@ -135,7 +137,7 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
         org.jongo.marshall.jackson.oid.Id id =
                 field.getAnnotation(org.jongo.marshall.jackson.oid.Id.class);
 
-        if (name.equals("_id") && objectId != null
+        if (ID.equals(name) && objectId != null
                 || id != null && objectId != null) {
             setIdFieldType(ObjectId.class);
             return true;
@@ -145,7 +147,7 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
             setIdFieldType(type);
             return true;
         }
-        if (id == null && objectId == null && name.equals("_id")) {
+        if (id == null && objectId == null && ID.equals(name)) {
             setIdFieldType(type);
             return true;
         }

@@ -16,7 +16,7 @@ import java.util.*;
 @Instantiate
 public class JongoEntityHub {
 
-    private final static Logger LOGGER = LoggerFactory.getLogger(JongoEntityHub.class);
+    private  static final  Logger LOGGER = LoggerFactory.getLogger(JongoEntityHub.class);
 
     private final ApplicationConfiguration configuration;
 
