@@ -1,6 +1,28 @@
+/*
+ * #%L
+ * Wisdom-Framework
+ * %%
+ * Copyright (C) 2015 Wisdom Framework
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
 package org.wisdom.jongo.bridge;
 
+import com.google.common.collect.Iterables;
 import com.mongodb.DB;
+import org.apache.commons.lang3.ClassUtils;
+import org.apache.commons.lang3.reflect.TypeUtils;
 import org.apache.felix.ipojo.annotations.*;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -217,8 +239,17 @@ public class JongoRepository implements Repository<DB>,
         public void register() {
             crud.setRepository(JongoRepository.this);
             Dictionary<String, Object> properties = new Hashtable<>();
-            properties.put(Crud.ENTITY_CLASS_PROPERTY, load(bundle, entity));
-            properties.put(Crud.ENTITY_CLASSNAME_PROPERTY, entity);
+            final Class clazz = load(bundle, entity);
+            final Iterable<Class<?>> classes = ClassUtils.hierarchy(clazz, ClassUtils.Interfaces.INCLUDE);
+            Class[] implemented = Iterables.toArray(classes, Class.class);
+            String[] classNames = new String[implemented.length];
+            int i = 0;
+            for (Class c : implemented) {
+                classNames[i] = c.getName();
+                i++;
+            }
+            properties.put(Crud.ENTITY_CLASS_PROPERTY, implemented);
+            properties.put(Crud.ENTITY_CLASSNAME_PROPERTY, classNames);
             registration = context.registerService(Crud.class, crud, properties);
         }
     }

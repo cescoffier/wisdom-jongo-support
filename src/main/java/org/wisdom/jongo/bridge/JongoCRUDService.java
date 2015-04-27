@@ -1,3 +1,22 @@
+/*
+ * #%L
+ * Wisdom-Framework
+ * %%
+ * Copyright (C) 2015 Wisdom Framework
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
 package org.wisdom.jongo.bridge;
 
 import com.mongodb.DB;
@@ -44,7 +63,7 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
     private JongoRepository repository;
 
     //constant name of the field in the entity to be used for id
-    private final String ID = "_id";
+    private static final String ID = "_id";
 
     /**
      * Constructor
@@ -407,11 +426,11 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
     private String createIdQuery(K id) {
         //for ids that are of type string
         if (idFieldType.equals(String.class)) {
-            return "{_id : '" + id + "'}";
+            return "{" + ID + " : '" + id + "'}";
         }
         //for ids that are of type long
         if (idFieldType.equals(Long.class) || idFieldType.equals(Long.TYPE)) {
-            return "{_id : " + id + "}";
+            return "{" + ID + " : " + id + "}";
         }
         //any other id type than String, Long, or ObjectId are not currently support
         throw new IllegalArgumentException("Id of type '" + id + "' is not supported");
