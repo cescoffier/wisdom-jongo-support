@@ -28,6 +28,12 @@
     <artifactId>wisdom-jongo-support</artifactId>
     <version>1.0-SNAPSHOT</version>
 
+    <parent>
+        <groupId>org.wisdom-framework</groupId>
+        <artifactId>wisdom-framework</artifactId>
+        <version>0.8.0</version>
+    </parent>
+
     <packaging>wisdom</packaging>
 
     <dependencies>
