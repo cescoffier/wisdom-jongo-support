@@ -21,19 +21,18 @@ import static org.jongo.Oid.withOid;
 
 /**
  * Jongo Crud service for the Wisdom-Framework. Extends the provided crud service.
+ *
  * @param <T> the entity class that you wish to use the crud services with.
  * @param <K> The type of the id field found in the entity class. Ie String, Long, ObjectId.
- * NOTE: Jongo seems to be limited to  6 types ids that it recognizes. Three are auto created ids by the database
- *      Case 1: field named _id of type String or long annotated with @ObjectId.
- *      Case 2: string or long with any name, annotated with both @ObjectId and @Id.
- *      Case 3: Type org.bson.types.ObjectId named _id.
- * There are 3 type where you must manually set the key before saving to the database.
- *      Case 1: type long name id. No annotations.
- *      Case 2: type long annotated with @Id named whatever you want.
- *      Case 3: type string annotated with @Id named whatever you want.
- * All other case are currently not supported.
- *
- *
+ *            NOTE: Jongo seems to be limited to  6 types ids that it recognizes. Three are auto created ids by the database
+ *            Case 1: field named _id of type String or long annotated with @ObjectId.
+ *            Case 2: string or long with any name, annotated with both @ObjectId and @Id.
+ *            Case 3: Type org.bson.types.ObjectId named _id.
+ *            There are 3 type where you must manually set the key before saving to the database.
+ *            Case 1: type long name id. No annotations.
+ *            Case 2: type long annotated with @Id named whatever you want.
+ *            Case 3: type string annotated with @Id named whatever you want.
+ *            All other case are currently not supported.
  */
 public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T, K> {
 
@@ -45,7 +44,8 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
     private JongoRepository repository;
 
     //constant name of the field in the entity to be used for id
-    private final String ID = "_id" ;
+    private final String ID = "_id";
+
     /**
      * Constructor
      *
@@ -58,12 +58,12 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
         collection = jongo.getCollection(entityClass.getSimpleName());
         this.idField = findIdField();
         entityKeyClass = (Class<K>) this.idField.getType();
-        System.out.println(entityClass +" : "+idField);
     }
 
     /**
      * Sets the repository to use.
-     * @param repository
+     *
+     * @param repository the repository we want to interact with.
      */
     public void setRepository(JongoRepository repository) {
         this.repository = repository;
@@ -71,16 +71,17 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
 
     /**
      * Sets the idField type.
-     * @param idFieldType
+     *
+     * @param idFieldType the type of the id field.
      */
     public void setIdFieldType(Class idFieldType) {
         this.idFieldType = idFieldType;
     }
 
     /**
-     *
-     * @param o
-     * @return
+     * Get the value of the id field from an entity.
+     * @param o the entity who's field we wish to access.
+     * @return the value from the field.
      */
     private K getEntityId(T o) {
         try {
@@ -157,7 +158,8 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
 
     /**
      * Check if the filed is annotated.
-     * @param field field from current class or parent class.
+     *
+     * @param field      field from current class or parent class.
      * @param annotation the annotation we are searching for.
      * @return true if found false if not.
      */
@@ -255,6 +257,7 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
 
     /**
      * Find one entity using the Mongo filter which gives us access to mongo query string formats.
+     *
      * @param filter what we are searching for.
      * @return the einity if found otherwise returns null.
      */
@@ -300,7 +303,6 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
     /**
      * Find all of the objects in a Mongo Collection using a filter.
      *
-     *
      * @param filter what we want to search for.
      * @return an iterable of the entity type.
      */
@@ -326,7 +328,7 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
      *
      * @param id of the object you wish to delete for.
      *           If the id doesn't exist there is an IllegalArgumentException.
-     *           <p/>
+     *           <p>
      *           Note: as far as I can tell jongo only supports remove for object id types and not others.
      */
     @Override
@@ -403,45 +405,62 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
     }
 
     private String createIdQuery(K id) {
-       if (idFieldType.equals(String.class)) {
+        //for ids that are of type string
+        if (idFieldType.equals(String.class)) {
             return "{_id : '" + id + "'}";
         }
-
+        //for ids that are of type long
         if (idFieldType.equals(Long.class) || idFieldType.equals(Long.TYPE)) {
             return "{_id : " + id + "}";
         }
-
+        //any other id type than String, Long, or ObjectId are not currently support
         throw new IllegalArgumentException("Id of type '" + id + "' is not supported");
 
     }
 
-
+    /**
+     * Get the Repository.
+     * @return the repository.
+     */
     @Override
     public Repository getRepository() {
         return repository;
     }
-
+    /**
+     * Not Support by Mongo
+     */
     @Override
     public void executeTransactionalBlock(Runnable runnable) throws HasBeenRollBackException {
         throw new UnsupportedOperationException("MongoDB does not support transactions");
 
     }
-
+    /**
+     * Not Support by Mongo
+     */
     @Override
     public TransactionManager getTransactionManager() {
         throw new UnsupportedOperationException("MongoDB does not support transactions");
     }
 
+    /**
+     * Not Support by Mongo
+     */
     @Override
     public <R> FluentTransaction<R>.Intermediate transaction(Callable<R> callable) {
         throw new UnsupportedOperationException("MongoDB does not support transactions");
     }
 
+    /**
+     * Not Support by Mongo
+     */
     @Override
     public <R> FluentTransaction<R> transaction() {
         throw new UnsupportedOperationException("MongoDB does not support transactions");
     }
 
+    /**
+     * Not Support by Mongo
+     */
     @Override
     public <A> A executeTransactionalBlock(Callable<A> callable) throws HasBeenRollBackException {
         throw new UnsupportedOperationException("MongoDB does not support transactions");
