@@ -1,6 +1,6 @@
 # Wisdom Jongo Bridge
 
-This project extends the Wisdom Framework Crud Services.
+This project extends the Wisdom Framework Crud Services and uses Jongo.
 
 ## Installation
 
