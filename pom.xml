@@ -36,6 +36,38 @@
 
     <packaging>wisdom</packaging>
 
+    <name>Wisdom Jongo Support</name>
+    <description>Jongo (MongoDB integration) integration in Wisdom Framework</description>
+    <url>https://github.com/wisdom-framework/wisdom-jongo-support</url>
+    <issueManagement>
+        <system>github</system>
+        <url>https://github.com/wisdom-framework/wisdom-jongo-support/issues</url>
+    </issueManagement>
+    <developers>
+        <developer>
+            <id>jenf11</id>
+            <name>Jennifer Fry</name>
+            <email>jenfry11[AT]gmail[DOT]com</email>
+            <url>https://github.com/jenf11</url>
+        </developer>
+
+        <developer>
+            <id>cescoffier</id>
+            <name>Clement Escoffier</name>
+            <email>clement[AT]apache[DOT].org</email>
+            <url>https://github.com/cescoffier</url>
+        </developer>
+    </developers>
+
+    <inceptionYear>2015</inceptionYear>
+
+    <scm>
+        <url>https://github.com/wisdom-framework/wisdom-jongo-support</url>
+        <connection>scm:git:git@github.com:wisdom-framework/wisdom-jongo-support.git</connection>
+        <developerConnection>scm:git:git@github.com:wisdom-framework/wisdom-jongo-support.git</developerConnection>
+    </scm>
+
+
     <dependencies>
         <dependency>
             <groupId>org.wisdom-framework</groupId>
@@ -52,17 +84,6 @@
             <artifactId>slf4j-api</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>org.webjars</groupId>
-            <artifactId>bootstrap</artifactId>
-            <version>3.1.1</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.webjars</groupId>
-            <artifactId>jquery</artifactId>
-            <version>2.1.0-2</version>
-        </dependency>
         <dependency>
             <groupId>org.mongodb</groupId>
             <artifactId>mongo-java-driver</artifactId>
@@ -213,19 +234,4 @@
             </plugin>
         </plugins>
     </build>
-
-    <repositories>
-        <repository>
-            <id>oss-snapshot</id>
-            <name>oss-snapshot</name>
-            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-        </repository>
-    </repositories>
-    <pluginRepositories>
-        <pluginRepository>
-            <id>oss-snapshot</id>
-            <name>oss-snapshot</name>
-            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-        </pluginRepository>
-    </pluginRepositories>
 </project>
