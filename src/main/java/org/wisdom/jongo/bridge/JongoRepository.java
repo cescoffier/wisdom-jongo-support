@@ -76,8 +76,10 @@ public class JongoRepository implements Repository<DB>,
      */
     @Invalidate
     public void stop() {
-        LOGGER.info("Stopping Jongo Repository for {}", database.getName());
-
+        // Invalidate method, defensive access required
+        if (database != null) {
+            LOGGER.info("Stopping Jongo Repository for {}", database.getName());
+        }
         Map<Bundle, List<InstantiatedCrud>> map = new HashMap<>(tracker.getTracked());
         tracker.close();
 
