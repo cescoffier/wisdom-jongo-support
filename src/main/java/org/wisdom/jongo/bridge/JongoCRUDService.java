@@ -31,7 +31,9 @@ import org.wisdom.jongo.service.MongoFilter;
 
 import java.io.Serializable;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -221,11 +223,37 @@ public class JongoCRUDService<T, K extends Serializable> implements JongoCRUD<T,
      */
     @Override
     public T save(T o) {
+        if (! o.getClass().equals(entityClass)) {
+            // probably a super class
+            o = createFromCustomConstructor(o);
+        }
         WriteResult result = collection.save(o);
         if (result.getError() != null) {
             throw new RuntimeException("Cannot save instance " + o + " in " + collection.getName() + " : " + result.getLastError());
         } else {
             return o;
+        }
+    }
+
+    private T createFromCustomConstructor(T o) {
+        // Try to find a constructor that match the class of o
+        try {
+            Constructor<T> constructor = entityClass.getConstructor(o.getClass());
+            if (! constructor.isAccessible()) {
+                constructor.setAccessible(true);
+            }
+            return constructor.newInstance(o);
+        } catch (NoSuchMethodException e) {
+             throw new RuntimeException("The object " + o + " cannot be saved - incompatible type and no 'copy' " +
+                     "constructor. The class " + entityClass.getName() + " requires a constructor accepting a " + o
+                     .getClass().getName() + " has unique parameter.");
+        } catch (InvocationTargetException e) {
+            throw new RuntimeException("The object " + o + " cannot be saved - the constructor has thrown an " +
+                    "exception", e);
+        } catch (InstantiationException e) {
+            throw new RuntimeException("The object " + o + " cannot be saved - the class cannot be instantiated");
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException("The object " + o + " cannot be saved - unaccessible constructor");
         }
     }
 
